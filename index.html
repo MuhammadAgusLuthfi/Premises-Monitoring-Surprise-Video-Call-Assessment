@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BRI Premises Monitoring</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bri-blue: #003f8a;
+    --bri-blue-mid: #0057b8;
+    --bri-blue-light: #e8f0fb;
+    --bri-orange: #f47920;
+    --bri-orange-light: #fff3e8;
+    --ok: #16a34a;
+    --ok-bg: #dcfce7;
+    --nok: #dc2626;
+    --nok-bg: #fee2e2;
+    --na: #9ca3af;
+    --na-bg: #f3f4f6;
+    --bg: #f0f4fa;
+    --card: #ffffff;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 2px 12px rgba(0,63,138,0.08);
+    --shadow-lg: 0 8px 32px rgba(0,63,138,0.13);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--bri-blue) 0%, var(--bri-blue-mid) 100%);
+    color: white;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,63,138,0.3);
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    gap: 16px;
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .bri-logo {
+    width: 40px;
+    height: 40px;
+    background: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--bri-blue);
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+  }
+  .header-title { font-size: 17px; font-weight: 700; line-height: 1.2; }
+  .header-sub { font-size: 11px; opacity: 0.75; font-weight: 400; }
+  .header-date { font-size: 12px; opacity: 0.8; text-align: right; flex-shrink: 0; }
+
+  /* MAIN */
+  .main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+  /* FORM META */
+  .meta-card {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+  .meta-card h2 { font-size: 14px; font-weight: 700; color: var(--bri-blue); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .meta-field label { display: block; font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .meta-field input, .meta-field select {
+    width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+    font-family: inherit; font-size: 13px; color: var(--text); background: #fafbff;
+    transition: border-color 0.2s;
+  }
+  .meta-field input:focus, .meta-field select:focus { outline: none; border-color: var(--bri-blue-mid); background: white; }
+
+  /* SCORE SUMMARY */
+  .score-summary {
+    background: linear-gradient(135deg, var(--bri-blue), var(--bri-blue-mid));
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-lg);
+  }
+  .score-main { display: flex; align-items: center; gap: 16px; }
+  .score-circle {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 3px solid rgba(255,255,255,0.4);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .score-num { font-size: 22px; font-weight: 800; line-height: 1; }
+  .score-pct { font-size: 11px; opacity: 0.8; }
+  .score-label h3 { font-size: 18px; font-weight: 700; }
+  .score-label p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+  .score-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+  .score-badge {
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 8px 14px;
+    text-align: center;
+    min-width: 70px;
+  }
+  .score-badge .b-num { font-size: 20px; font-weight: 800; }
+  .score-badge .b-label { font-size: 10px; opacity: 0.8; margin-top: 1px; }
+  .badge-ok { background: rgba(22,163,74,0.3); }
+  .badge-nok { background: rgba(220,38,38,0.3); }
+  .badge-na { background: rgba(255,255,255,0.1); }
+
+  /* TABS */
+  .tabs-wrap { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+  .tab-btn {
+    padding: 8px 14px; border: none; border-radius: 20px; cursor: pointer;
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    background: white; color: var(--text-muted); border: 1.5px solid var(--border);
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .tab-btn.active { background: var(--bri-blue); color: white; border-color: var(--bri-blue); }
+  .tab-btn:hover:not(.active) { border-color: var(--bri-blue-mid); color: var(--bri-blue); }
+
+  /* SECTION CARD */
+  .section-card {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    display: none;
+  }
+  .section-card.visible { display: block; }
+  .section-card.all-visible { display: block; }
+
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px;
+    cursor: pointer;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .section-header:hover { background: var(--bri-blue-light); }
+  .section-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--bri-blue-light); color: var(--bri-blue);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+  .section-title { flex: 1; }
+  .section-title h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+  .section-title p { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .section-progress { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .prog-bar-wrap { width: 80px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .prog-bar { height: 100%; background: var(--ok); border-radius: 3px; transition: width 0.4s; }
+  .prog-pct { font-size: 12px; font-weight: 700; color: var(--text-muted); min-width: 34px; text-align: right; }
+  .section-toggle { color: var(--text-muted); font-size: 16px; transition: transform 0.2s; flex-shrink: 0; }
+  .section-toggle.open { transform: rotate(180deg); }
+
+  /* ITEMS */
+  .items-wrap { padding: 12px 20px 16px; }
+  .item-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-num { font-size: 11px; font-weight: 700; color: var(--text-muted); min-width: 22px; padding-top: 2px; }
+  .item-text { flex: 1; font-size: 13px; line-height: 1.5; color: var(--text); }
+  .item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn-check {
+    padding: 4px 10px; border: 1.5px solid; border-radius: 6px;
+    cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 700;
+    transition: all 0.15s; white-space: nowrap; background: transparent;
+  }
+  .btn-ok { border-color: var(--ok); color: var(--ok); }
+  .btn-ok.active, .btn-ok:hover { background: var(--ok); color: white; }
+  .btn-nok { border-color: var(--nok); color: var(--nok); }
+  .btn-nok.active, .btn-nok:hover { background: var(--nok); color: white; }
+  .btn-na { border-color: var(--na); color: var(--na); }
+  .btn-na.active, .btn-na:hover { background: var(--na); color: white; }
+
+  /* SECTION FOOTER */
+  .section-footer {
+    border-top: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    background: #fafbff;
+  }
+  .section-verdict { display: flex; gap: 8px; align-items: center; }
+  .section-verdict span { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .verdict-btn {
+    padding: 5px 14px; border: 1.5px solid; border-radius: 20px;
+    cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 700;
+    transition: all 0.15s; background: transparent;
+  }
+  .verdict-sesuai { border-color: var(--ok); color: var(--ok); }
+  .verdict-sesuai.active { background: var(--ok); color: white; }
+  .verdict-tidak { border-color: var(--nok); color: var(--nok); }
+  .verdict-tidak.active { background: var(--nok); color: white; }
+  .section-note { flex: 1; min-width: 180px; }
+  .section-note input {
+    width: 100%; padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+    font-family: inherit; font-size: 12px; color: var(--text); background: white;
+  }
+  .section-note input:focus { outline: none; border-color: var(--bri-blue-mid); }
+
+  /* SUBMIT */
+  .submit-area { text-align: center; padding: 24px 0 8px; }
+  .btn-submit {
+    background: linear-gradient(135deg, var(--bri-orange), #e06010);
+    color: white; border: none; border-radius: 12px;
+    padding: 14px 40px; font-family: inherit; font-size: 15px; font-weight: 700;
+    cursor: pointer; box-shadow: 0 4px 16px rgba(244,121,32,0.35);
+    transition: all 0.2s;
+  }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(244,121,32,0.4); }
+  .btn-print {
+    background: white; color: var(--bri-blue); border: 2px solid var(--bri-blue);
+    border-radius: 12px; padding: 14px 28px; font-family: inherit; font-size: 15px;
+    font-weight: 700; cursor: pointer; margin-right: 12px; transition: all 0.2s;
+  }
+  .btn-print:hover { background: var(--bri-blue-light); }
+
+  /* STATUS PILL */
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  }
+  .pill-sesuai { background: var(--ok-bg); color: var(--ok); }
+  .pill-tidak { background: var(--nok-bg); color: var(--nok); }
+
+  .btn-excel {
+    background: #1d6f42; color: white; border: none;
+    border-radius: 12px; padding: 14px 28px; font-family: inherit; font-size: 15px;
+    font-weight: 700; cursor: pointer; margin-right: 12px;
+    box-shadow: 0 4px 14px rgba(29,111,66,0.3); transition: all 0.2s;
+  }
+  .btn-excel:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(29,111,66,0.4); }
+    .score-summary { flex-direction: column; align-items: flex-start; }
+    .header-date { display: none; }
+    .item-actions { flex-direction: column; }
+  }
+  @media print {
+    .tab-btn, .btn-check, .verdict-btn, .submit-area, .section-note input { display: none; }
+    .section-card { display: block !important; }
+    body { background: white; }
+    .header { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <div class="bri-logo">BRI</div>
+      <div>
+        <div class="header-title">Premises Monitoring</div>
+        <div class="header-sub">Surprise Video Call Assessment</div>
+      </div>
+    </div>
+    <div class="header-date" id="headerDate"></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- META -->
+  <div class="meta-card">
+    <h2>📋 Data Penilaian</h2>
+    <div class="meta-grid">
+      <div class="meta-field">
+        <label>Nama UKO / Unit Kerja</label>
+        <input type="text" id="namaUko" placeholder="Misal: KCP Semarang Barat">
+      </div>
+      <div class="meta-field">
+        <label>Kode UKO</label>
+        <input type="text" id="kodeUko" placeholder="Misal: 0123">
+      </div>
+      <div class="meta-field">
+        <label>Tanggal Penilaian</label>
+        <input type="date" id="tanggalPenilaian">
+      </div>
+      <div class="meta-field">
+        <label>Penilai</label>
+        <input type="text" id="namaPenilai" placeholder="Nama penilai">
+      </div>
+      <div class="meta-field">
+        <label>Shift / Waktu VC</label>
+        <input type="text" id="shiftVc" placeholder="Misal: 10.00 WIB">
+      </div>
+      <div class="meta-field">
+        <label>Status</label>
+        <select id="statusPenilaian">
+          <option value="">-- Pilih Status --</option>
+          <option>Sesuai</option>
+          <option>Tidak Sesuai</option>
+          <option>Sebagian Sesuai</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCORE SUMMARY -->
+  <div class="score-summary">
+    <div class="score-main">
+      <div class="score-circle">
+        <div class="score-num" id="scorePct">0%</div>
+        <div class="score-pct">Score</div>
+      </div>
+      <div class="score-label">
+        <h3 id="scoreLabel">Mulai Penilaian</h3>
+        <p id="scoreDesc">Isi checklist di bawah untuk melihat skor</p>
+      </div>
+    </div>
+    <div class="score-badges">
+      <div class="score-badge badge-ok">
+        <div class="b-num" id="totalOk">0</div>
+        <div class="b-label">✓ Sesuai</div>
+      </div>
+      <div class="score-badge badge-nok">
+        <div class="b-num" id="totalNok">0</div>
+        <div class="b-label">✗ Tidak</div>
+      </div>
+      <div class="score-badge badge-na">
+        <div class="b-num" id="totalNa">0</div>
+        <div class="b-label">N/A</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-wrap" id="tabsWrap"></div>
+
+  <!-- SECTIONS -->
+  <div id="sectionsContainer"></div>
+
+  <!-- SUBMIT -->
+  <div class="submit-area">
+    <button class="btn-print" onclick="window.print()">🖨️ Cetak / PDF</button>
+    <button class="btn-excel" onclick="exportExcel()">📊 Export Excel</button>
+    <button class="btn-submit" onclick="submitPenilaian()">✅ Simpan Hasil Penilaian</button>
+  </div>
+
+</div>
+
+<script>
+const SECTIONS = [
+  {
+    id: "fasad",
+    icon: "🏛️",
+    title: "Fasad & Luar Gedung",
+    subtitle: "Area luar banking hall",
+    items: [
+      "Terdapat pylon UKO sesuai standar dan dalam kondisi baik (tidak rusak atau kotor)",
+      "Terdapat signage BRI sesuai standar dalam kondisi baik (tidak rusak/kotor)",
+      "Main entrance dalam kondisi baik (portal biru tidak rusak/kotor atau frameless dengan sunblast)",
+      "Terdapat stiker nama UKO dan jam operasional (desain terbaru) dalam kondisi baik (terbaca dan tidak rusak)",
+      "Terdapat stiker LPS sesuai desain terbaru di sisi kanan pintu masuk dalam kondisi baik",
+      "Kondisi dinding kaca luar dan dalam bersih dan tidak rusak (sunblast terpasang rapi)",
+      "Terdapat sign plat tarik/dorong dalam kondisi baik (terbaca dan tidak rusak)",
+      "Dinding luar gedung dalam kondisi bersih, cat tidak mengelupas, dan tidak kusam",
+      "Wall Cladding dalam kondisi bersih dan tidak kusam (jika ada)",
+      "Area parkir, paving block, dan halaman dalam kondisi bersih dan rapi (jika ada)",
+      "Plafond luar gedung dalam kondisi bersih dan tidak rusak",
+      "Teras luar di depan pintu masuk Banking Hall bersih, tidak ada benda di luar standar (kursi tambahan, tempat helm, alat kebersihan dll)",
+      "Terdapat keset dari bahan nomad/karet biru gelap dalam kondisi bersih dan layak",
+      "Terdapat tempat sampah tertutup stainless di area luar pintu masuk dalam kondisi baik",
+      "Terdapat tempat payung stainless (sisi samping tertutup) dalam kondisi bersih",
+      "Pos Satpam dalam kondisi bersih dan rapi (jika ada)",
+      "Terdapat CCTV yang menghadap ke area teras banking hall"
+    ]
+  },
+  {
+    id: "pintu",
+    icon: "🚪",
+    title: "Pintu Masuk ATM",
+    subtitle: "Handle, stiker, sunblast",
+    items: [
+      "Handle pintu tidak rusak dan tersedia stiker tarik / dorong",
+      "Terdapat stiker pintu ATM dengan design terbaru dan dalam kondisi baik (tidak mengelupas, tidak kusam/luntur)",
+      "Terdapat stiker tata tertib di pintu ruang ATM dengan desain terbaru",
+      "Terpasang sunblast pada kaca gallery ATM dan kondisi bersih, tidak kusam, tidak mengelupas dan rapi"
+    ]
+  },
+  {
+    id: "ruang_atm",
+    icon: "🏧",
+    title: "Ruang ATM",
+    subtitle: "Kaca, lantai, AC, CCTV, plafond",
+    items: [
+      "Kaca ruang ATM dalam kondisi bersih",
+      "Lantai ruang ATM dalam kondisi bersih dan tidak terdapat sampah berserakan",
+      "Terdapat AC dalam kondisi dingin dan tidak bocor (tidak terpasang di atas mesin ATM/CRM)",
+      "Lampu ruang ATM menyala dan terang",
+      "Terdapat pengharum ruangan otomatis yang berfungsi dengan aroma segar (tidak wajib)",
+      "Terdapat CCTV di ruang ATM dalam kondisi berfungsi (satu CCTV per mesin ATM)",
+      "Tempat sampah menggunakan bahan stainless/kawat/kayu tanpa penutup atas sesuai standar dan bersih",
+      "Terdapat informasi lokasi ATM BRI dan agen BRILink terdekat (akrilik atau cetakan dengan laminating)",
+      "Tidak terdapat brosur selain produk BRI Group di ruang ATM (jika tersedia tempat brosur)",
+      "Plafond dalam kondisi bersih, rapi dan tidak bocor",
+      "Dinding ruang ATM dalam kondisi bersih dan tidak ada noda",
+      "Box IT/backdrop dalam keadaan terkunci"
+    ]
+  },
+  {
+    id: "atm_crm",
+    icon: "💳",
+    title: "Mesin ATM & CRM",
+    subtitle: "Fungsi, stiker, struk, keamanan",
+    items: [
+      "Mesin ATM/CRM dalam kondisi berfungsi baik untuk transaksi tunai dan non tunai",
+      "Terdapat informasi/stiker denominasi mata uang pada body ATM dalam kondisi bersih dan rapi",
+      "Terdapat stiker insert card dalam kondisi bersih dan rapi (kecuali mesin Hitachi)",
+      "Terdapat informasi setor dan tarik tunai pada cover/backdrop CRM dalam kondisi bersih dan rapi",
+      "Terdapat stiker logo switcher pada cover/backdrop CRM dalam kondisi bersih dan rapi",
+      "Terdapat stiker top up Brizzi (untuk mesin yang mendukung) dalam kondisi bersih dan rapi",
+      "Terdapat stiker tips aman bertransaksi dengan nomor TID tercetak (bukan tulisan tangan) dalam kondisi baik",
+      "Terdapat stiker 'Setor & Tarik Tunai Disini' pada mulut mesin CRM dalam kondisi bersih dan rapi",
+      "Struk pada mesin ATM/CRM tersedia dan terbaca dengan jelas",
+      "Terdapat stiker logo BRI pada body mesin dalam kondisi bersih dan rapi",
+      "Jika ATM/CRM tidak beroperasi/pemeliharaan, terpasang poster informasi akrilik/tempel sesuai poster terbaru",
+      "Tidak terdapat benda mencurigakan (nomor call center palsu, mini camera, ganjalan/alat pada cover pinpad, card reader, dll)",
+      "Cover/Booth, mesin ATM/CRM dalam kondisi bersih, tidak ada tempelan tidak diperlukan",
+      "Neon box pada cover ATM/CRM (jika ada) menggunakan logo terbaru",
+      "Tombol Pinpad pada mesin ATM/CRM berfungsi dengan baik"
+    ]
+  },
+  {
+    id: "banking_hall",
+    icon: "🏦",
+    title: "Area Dalam Banking Hall",
+    subtitle: "Umum, antrean, APAR, fasilitas",
+    items: [
+      "Seluruh unit kerja menggunakan antrean (mesin antrean/manual dalam kondisi bersih dan layak)",
+      "Terdapat APAR yang belum expired",
+      "Dinding banking hall dalam kondisi bersih dan rapi",
+      "Lampu Banking Hall berfungsi, terang dan tidak ada yang rusak",
+      "AC berfungsi, dingin dan nyaman",
+      "Menggunakan pengharum ruangan mesin otomatis di dinding, berfungsi dan tercium harum",
+      "Tanaman hidup di area banking hall dalam kondisi segar dan tidak kering (tinggi maks 1,2 m)",
+      "Writing desk dalam kondisi baik (rapi, bersih, tidak rusak) dan form tersedia (jika ada)",
+      "Terdapat kalender duduk pada writing desk dalam kondisi baik (jika ada)",
+      "Terdapat ballpoint yang berfungsi di area writing desk (jika ada)",
+      "Terdapat informasi Agen BRILink terdekat",
+      "Terdapat informasi nomor WA/telegram kotak saran digital (poster acrylic/standing acrylic di area writing desk)",
+      "Terdapat komitmen anti gratifikasi di dinding banking hall dengan bingkai acrylic",
+      "Terdapat poster anti fraud/edukasi kehati-hatian bertransaksi di banking hall dan galeri e-channel",
+      "Terdapat TV yang menayangkan materi BRIVision yang terupdate",
+      "Terdapat tempat sampah stainless tertutup (tidak ada asbak/tempat sampah rokok)",
+      "Terdapat kursi tunggu nasabah sesuai standar (bukan kursi lipat/plastik/kursi kondangan)",
+      "Terdapat informasi suku bunga update (dapat ditayangkan di TV)",
+      "Tersedia wifi untuk nasabah dan koneksi lancar",
+      "Terdapat CCTV menghadap ke area Teller, CS, main entrance, area pintu kluis",
+      "Tersedia minuman untuk nasabah di banking hall (opsional)"
+    ]
+  },
+  {
+    id: "teller_spv",
+    icon: "💼",
+    title: "Area Teller & SPV",
+    subtitle: "Toonbank, perangkat, kebersihan",
+    items: [
+      "Toonbank Teller dalam kondisi bersih, rapi, dan tidak rusak",
+      "Terdapat backdrop Teller dengan elemen estetis motif batik/desain terbaru sesuai standar",
+      "Terdapat informasi tarif jasa bank up to date di toonbank Teller (acrylic)",
+      "Cashier box diletakkan di tempat yang aman selama jam layanan",
+      "Handphone tidak ada di area kerja Teller",
+      "Terdapat namedesk Teller dari bahan stainless",
+      "Tersedia tanaman hidup segar dan tidak layu (1 tanaman untuk 1-3 teller, 2 tanaman untuk >3 teller)",
+      "Tersedia permen di toonbank Teller (toples kaca, di masing-masing meja)",
+      "Tersedia EDC di toonbank Teller dalam kondisi berfungsi (minimal 1 EDC di area teller)",
+      "Perangkat ruang kerja Teller lengkap dan berfungsi (mesin hitung uang, passbook printer, lampu UV, panic button, cashier box, kalkulator)",
+      "Area ruang kerja Teller bersih dan rapi (tidak ada kertas/berkas/karet gelang berserakan)",
+      "Tidak terdapat barang pribadi di area meja kerja Teller (foto, boneka, anime dll)",
+      "Akses ruang Teller hanya bisa diakses terbatas dan dijaga selama jam layanan",
+      "Meja dan kursi Supervisor dalam kondisi baik sesuai standar dan desain terupdate",
+      "Area meja Supervisor dan tempat duduk nasabah bersih, rapi, dan tidak rusak",
+      "Tersedia tanaman hidup segar dan tidak layu di ujung kiri meja Supervisor/AMOL",
+      "Perangkat ruang kerja Supervisor lengkap dan berfungsi (termasuk passbook printer)",
+      "Area di bawah meja dan CPU Supervisor rapi, tidak ada barang pribadi/lain, tempat sampah stainless tertutup (jika ada)",
+      "Terdapat name desk bertulisan 'SUPERVISOR' dari bahan stainless dalam kondisi baik",
+      "Tidak terdapat barang pribadi di area meja kerja Supervisor (foto, boneka, anime dll)",
+      "Terdapat stok Kartu Debit dan Buku Tabungan di SPV"
+    ]
+  },
+  {
+    id: "cs",
+    icon: "🤝",
+    title: "Area CS",
+    subtitle: "Meja, backdrop, perangkat, stok",
+    items: [
+      "Meja dan kursi CS dalam kondisi baik sesuai standar dan desain terupdate",
+      "Handphone tidak ada di area kerja CS",
+      "Area meja CS dan tempat duduk nasabah bersih, rapi, dan tidak rusak",
+      "Persediaan kartu debit dan surat berharga disimpan di brankas, tidak ada stok kartu tidak terpakai di laci",
+      "Terdapat backdrop CS menggunakan neon box atau acrylic dengan materi komunikasi produk BRI up to date",
+      "Cashier box diletakkan di tempat yang aman selama jam layanan",
+      "Tersedia take one box berisi brosur produk BRI (di masing-masing meja)",
+      "Terdapat name desk CS dari bahan stainless dalam kondisi baik",
+      "Tersedia tanaman hidup segar dan tidak layu di ujung kiri meja CS",
+      "Tersedia permen di meja CS (toples kaca, di masing-masing meja)",
+      "Perangkat ruang kerja CS lengkap dan berfungsi (printer scanner min. 1, passbook printer, webcam)",
+      "Tersedia EDC di meja CS dalam kondisi berfungsi",
+      "Tidak terdapat barang pribadi di area meja kerja CS (foto, boneka, anime dll)",
+      "Area di bawah meja dan CPU CS rapi, tidak ada barang pribadi/lain, tempat sampah stainless tertutup (jika ada)",
+      "Terdapat stok Kartu Debit di masing-masing CS"
+    ]
+  },
+  {
+    id: "toilet",
+    icon: "🚻",
+    title: "Area Toilet",
+    subtitle: "Kebersihan, kelengkapan, fungsi",
+    items: [
+      "Terdapat signage petunjuk arah menuju toilet yang mudah terbaca oleh nasabah",
+      "Lantai dalam kondisi bersih, tidak bernoda dan kering",
+      "Dinding dalam kondisi bersih, kering, tidak berjamur dan tidak berwarna-warni",
+      "Pintu dan kunci toilet dalam kondisi baik dan tidak rusak",
+      "Ruangan toilet dalam kondisi bersih, harum, dan kering",
+      "Closet duduk dalam kondisi bersih dan kering",
+      "Wastafel dalam kondisi bersih dan kering",
+      "Cermin bersih dan bening (jika ada)",
+      "Keran air berfungsi dengan baik",
+      "Tersedia tisue toilet",
+      "Tersedia soap dispenser berisi sabun dan dalam kondisi bersih",
+      "Terdapat pengharum ruangan otomatis dan tercium harum",
+      "Tersedia tempat sampah tertutup berbahan stainless dalam kondisi bersih dan berfungsi",
+      "Tidak terdapat alat kebersihan/barang pribadi (pel, sikat gigi, gel rambut dll) di dalam toilet"
+    ]
+  },
+  {
+    id: "brimen_server",
+    icon: "🗄️",
+    title: "BRImen & Ruang Server",
+    subtitle: "Dokumen, penyimpanan, server",
+    items: [
+      "Seluruh dokumen (transaksi & non transaksi) telah dilakukan penyiangan, dilabelkan, disimpan dan diurutkan sesuai ketentuan BRIMEN",
+      "Terdapat CCTV dan APAR yang belum expired sesuai ketentuan BRIMEN",
+      "Ruang BRIMEN, lemari, dan rak sudah diberi label sesuai ketentuan BRIMEN",
+      "Ruangan, lemari atau rak besi tersedia sesuai kebutuhan, bersih, rapi dan tidak lembab",
+      "Tidak terdapat alat kebersihan, barang pribadi atau barang lain di ruang BRIMEN",
+      "Ruang server dalam kondisi dingin (suhu maks 25°C, kontrol kelembaban), tidak ada AC bocor, bersih, dan terkunci",
+      "Ruang server tidak dimanfaatkan untuk beraktivitas, tidak ada alat kebersihan/barang pribadi/barang lain",
+      "Tidak terdapat plafond bocor di ruang server",
+      "Tembok/dinding ruang server dalam kondisi bersih dan tidak terkelupas"
+    ]
+  }
+];
+
+// State
+const state = {};
+SECTIONS.forEach(s => {
+  state[s.id] = {
+    items: s.items.map(() => null),
+    verdict: null,
+    note: ""
+  };
+});
+
+let activeTab = "all";
+
+// Init
+function init() {
+  document.getElementById('headerDate').innerHTML = new Date().toLocaleDateString('id-ID', {weekday:'long', year:'numeric', month:'long', day:'numeric'}) + '<br>' + new Date().toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('tanggalPenilaian').value = new Date().toISOString().slice(0,10);
+  renderTabs();
+  renderSections();
+  updateScore();
+}
+
+function renderTabs() {
+  const wrap = document.getElementById('tabsWrap');
+  wrap.innerHTML = '';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'tab-btn' + (activeTab === 'all' ? ' active' : '');
+  allBtn.textContent = 'Semua Area';
+  allBtn.onclick = () => { activeTab = 'all'; renderTabs(); renderSections(); };
+  wrap.appendChild(allBtn);
+  SECTIONS.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (activeTab === s.id ? ' active' : '');
+    btn.textContent = s.icon + ' ' + s.title;
+    btn.onclick = () => { activeTab = s.id; renderTabs(); renderSections(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function renderSections() {
+  const container = document.getElementById('sectionsContainer');
+  container.innerHTML = '';
+  SECTIONS.forEach(s => {
+    const card = buildSectionCard(s);
+    if (activeTab === 'all') card.classList.add('all-visible');
+    else if (activeTab === s.id) card.classList.add('visible');
+    container.appendChild(card);
+  });
+}
+
+function buildSectionCard(s) {
+  const sState = state[s.id];
+  const filled = sState.items.filter(v => v !== null).length;
+  const total = sState.items.length;
+  const ok = sState.items.filter(v => v === 'ok').length;
+  const pct = total ? Math.round(ok / total * 100) : 0;
+
+  const card = document.createElement('div');
+  card.className = 'section-card';
+  card.id = 'card-' + s.id;
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'section-header';
+  header.innerHTML = `
+    <div class="section-icon">${s.icon}</div>
+    <div class="section-title">
+      <h3>${s.title}</h3>
+      <p>${s.subtitle} &mdash; ${filled}/${total} diisi</p>
+    </div>
+    <div class="section-progress">
+      <div class="prog-bar-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
+      <span class="prog-pct">${pct}%</span>
+    </div>
+    <div class="section-toggle" id="toggle-${s.id}">▼</div>
+  `;
+
+  const body = document.createElement('div');
+  body.id = 'body-' + s.id;
+  body.style.display = 'none';
+
+  // Items
+  const itemsWrap = document.createElement('div');
+  itemsWrap.className = 'items-wrap';
+  s.items.forEach((itemText, idx) => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    const val = sState.items[idx];
+    row.innerHTML = `
+      <span class="item-num">${idx+1}</span>
+      <span class="item-text">${itemText}</span>
+      <div class="item-actions">
+        <button class="btn-check btn-ok ${val==='ok'?'active':''}" onclick="setItem('${s.id}',${idx},'ok',this)">✓ Sesuai</button>
+        <button class="btn-check btn-nok ${val==='nok'?'active':''}" onclick="setItem('${s.id}',${idx},'nok',this)">✗ Tidak</button>
+        <button class="btn-check btn-na ${val==='na'?'active':''}" onclick="setItem('${s.id}',${idx},'na',this)">N/A</button>
+      </div>
+    `;
+    itemsWrap.appendChild(row);
+  });
+  body.appendChild(itemsWrap);
+
+  // Footer
+  const footer = document.createElement('div');
+  footer.className = 'section-footer';
+  const vSesuai = sState.verdict === 'sesuai' ? 'active' : '';
+  const vTidak = sState.verdict === 'tidak' ? 'active' : '';
+  footer.innerHTML = `
+    <div class="section-verdict">
+      <span>Verdict:</span>
+      <button class="verdict-btn verdict-sesuai ${vSesuai}" onclick="setVerdict('${s.id}','sesuai',this)">✓ Sesuai</button>
+      <button class="verdict-btn verdict-tidak ${vTidak}" onclick="setVerdict('${s.id}','tidak',this)">✗ Tidak Sesuai</button>
+    </div>
+    <div class="section-note">
+      <input type="text" placeholder="Keterangan / catatan..." value="${sState.note}" oninput="setNote('${s.id}',this.value)">
+    </div>
+  `;
+  body.appendChild(footer);
+  card.appendChild(header);
+  card.appendChild(body);
+
+  header.onclick = () => {
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    document.getElementById('toggle-' + s.id).classList.toggle('open', !isOpen);
+  };
+
+  return card;
+}
+
+function setItem(sId, idx, val, btn) {
+  const sState = state[sId];
+  if (sState.items[idx] === val) {
+    sState.items[idx] = null;
+    btn.classList.remove('active');
+  } else {
+    sState.items[idx] = val;
+    // clear siblings
+    const row = btn.closest('.item-row');
+    row.querySelectorAll('.btn-check').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  updateScore();
+  updateSectionHeader(sId);
+}
+
+function setVerdict(sId, val, btn) {
+  const sState = state[sId];
+  if (sState.verdict === val) {
+    sState.verdict = null;
+    btn.classList.remove('active');
+  } else {
+    sState.verdict = val;
+    const footer = btn.closest('.section-footer');
+    footer.querySelectorAll('.verdict-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+}
+
+function setNote(sId, val) { state[sId].note = val; }
+
+function updateSectionHeader(sId) {
+  const s = SECTIONS.find(x => x.id === sId);
+  const sState = state[sId];
+  const filled = sState.items.filter(v => v !== null).length;
+  const total = sState.items.length;
+  const ok = sState.items.filter(v => v === 'ok').length;
+  const pct = total ? Math.round(ok / total * 100) : 0;
+  const card = document.getElementById('card-' + sId);
+  if (!card) return;
+  const sub = card.querySelector('.section-title p');
+  if (sub) sub.textContent = `${s.subtitle} — ${filled}/${total} diisi`;
+  const progBar = card.querySelector('.prog-bar');
+  if (progBar) progBar.style.width = pct + '%';
+  const progPct = card.querySelector('.prog-pct');
+  if (progPct) progPct.textContent = pct + '%';
+}
+
+function updateScore() {
+  let totalOk = 0, totalNok = 0, totalNa = 0, totalFilled = 0, totalAll = 0;
+  SECTIONS.forEach(s => {
+    state[s.id].items.forEach(v => {
+      totalAll++;
+      if (v === 'ok') { totalOk++; totalFilled++; }
+      else if (v === 'nok') { totalNok++; totalFilled++; }
+      else if (v === 'na') { totalNa++; totalFilled++; }
+    });
+  });
+  const relevant = totalAll - totalNa;
+  const pct = relevant > 0 ? Math.round(totalOk / relevant * 100) : 0;
+
+  document.getElementById('scorePct').textContent = pct + '%';
+  document.getElementById('totalOk').textContent = totalOk;
+  document.getElementById('totalNok').textContent = totalNok;
+  document.getElementById('totalNa').textContent = totalNa;
+
+  let label, desc;
+  if (totalFilled === 0) { label = 'Mulai Penilaian'; desc = 'Isi checklist di bawah untuk melihat skor'; }
+  else if (pct >= 90) { label = '🌟 Sangat Baik'; desc = `${totalFilled} dari ${totalAll} item telah dinilai`; }
+  else if (pct >= 75) { label = '✅ Baik'; desc = `${totalFilled} dari ${totalAll} item telah dinilai`; }
+  else if (pct >= 50) { label = '⚠️ Cukup'; desc = `Perlu perbaikan di beberapa area`; }
+  else { label = '❌ Perlu Perbaikan'; desc = `Banyak item yang belum sesuai standar`; }
+
+  document.getElementById('scoreLabel').textContent = label;
+  document.getElementById('scoreDesc').textContent = desc;
+}
+
+function submitPenilaian() {
+  const uko = document.getElementById('namaUko').value || '(belum diisi)';
+  const penilai = document.getElementById('namaPenilai').value || '(belum diisi)';
+  let totalOk = 0, totalNok = 0, totalNa = 0, totalAll = 0;
+  SECTIONS.forEach(s => state[s.id].items.forEach(v => { totalAll++; if(v==='ok') totalOk++; else if(v==='nok') totalNok++; else if(v==='na') totalNa++; }));
+  const relevant = totalAll - totalNa;
+  const pct = relevant > 0 ? Math.round(totalOk/relevant*100) : 0;
+  alert(`✅ HASIL PENILAIAN DISIMPAN\n\nUKO: ${uko}\nPenilai: ${penilai}\nScore: ${pct}% (${totalOk} sesuai, ${totalNok} tidak sesuai, ${totalNa} N/A)\n\nSilakan cetak/screenshot halaman ini untuk laporan.`);
+}
+
+function exportExcel() {
+  const kode = (document.getElementById('kodeUko').value || 'XXXX').trim().replace(/[/\\?%*:|"<>]/g, '-');
+  const nama = (document.getElementById('namaUko').value || 'Nama-UKO').trim().replace(/[/\\?%*:|"<>]/g, '-');
+  const tgl  = (document.getElementById('tanggalPenilaian').value || new Date().toISOString().slice(0,10));
+  const penilai = document.getElementById('namaPenilai').value || '-';
+  const shift   = document.getElementById('shiftVc').value || '-';
+  const fileName = `${kode}-${nama}-${tgl}.xlsx`;
+
+  const wb = XLSX.utils.book_new();
+
+  /* ── SHEET 1: SUMMARY ── */
+  let totalOk=0, totalNok=0, totalNa=0, totalAll=0;
+  const sectionSummary = SECTIONS.map(s => {
+    const st = state[s.id];
+    const ok  = st.items.filter(v=>v==='ok').length;
+    const nok = st.items.filter(v=>v==='nok').length;
+    const na  = st.items.filter(v=>v==='na').length;
+    const relevant = st.items.length - na;
+    const pct = relevant > 0 ? Math.round(ok/relevant*100) : 0;
+    totalOk+=ok; totalNok+=nok; totalNa+=na; totalAll+=st.items.length;
+    return {
+      'Area': s.title,
+      'Total Item': st.items.length,
+      'Sesuai ✓': ok,
+      'Tidak Sesuai ✗': nok,
+      'N/A': na,
+      'Score (%)': pct,
+      'Verdict': st.verdict === 'sesuai' ? 'SESUAI' : st.verdict === 'tidak' ? 'TIDAK SESUAI' : '-',
+      'Keterangan': st.note || '-'
+    };
+  });
+  const relevant = totalAll - totalNa;
+  const overallPct = relevant > 0 ? Math.round(totalOk/relevant*100) : 0;
+
+  // Header info rows
+  const infoRows = [
+    ['LAPORAN PENILAIAN PREMISES BRI'],
+    [],
+    ['Nama UKO', nama],
+    ['Kode UKO', kode],
+    ['Tanggal Penilaian', tgl],
+    ['Penilai', penilai],
+    ['Shift / Waktu VC', shift],
+    ['Score Keseluruhan', overallPct + '%'],
+    ['Total Sesuai', totalOk],
+    ['Total Tidak Sesuai', totalNok],
+    ['Total N/A', totalNa],
+    [],
+    ['REKAPITULASI PER AREA'],
+    []
+  ];
+
+  const summarySheet = XLSX.utils.aoa_to_sheet(infoRows);
+  XLSX.utils.sheet_add_json(summarySheet, sectionSummary, { origin: infoRows.length, skipHeader: false });
+
+  // Column widths summary sheet
+  summarySheet['!cols'] = [
+    {wch:30},{wch:12},{wch:12},{wch:16},{wch:8},{wch:12},{wch:16},{wch:40}
+  ];
+  // Merge title cell
+  summarySheet['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:7} }];
+
+  XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+  /* ── SHEET 2: DETAIL PER ITEM ── */
+  const detailRows = [];
+  SECTIONS.forEach(s => {
+    const st = state[s.id];
+    s.items.forEach((itemText, idx) => {
+      const val = st.items[idx];
+      detailRows.push({
+        'Area': s.title,
+        'No': idx + 1,
+        'Item Penilaian': itemText,
+        'Status': val === 'ok' ? 'SESUAI' : val === 'nok' ? 'TIDAK SESUAI' : val === 'na' ? 'N/A' : 'BELUM DINILAI',
+        'Verdict Area': st.verdict === 'sesuai' ? 'SESUAI' : st.verdict === 'tidak' ? 'TIDAK SESUAI' : '-',
+        'Keterangan Area': st.note || '-'
+      });
+    });
+  });
+
+  const detailSheet = XLSX.utils.json_to_sheet(detailRows);
+  detailSheet['!cols'] = [
+    {wch:28},{wch:5},{wch:80},{wch:16},{wch:16},{wch:40}
+  ];
+  XLSX.utils.book_append_sheet(wb, detailSheet, 'Detail Per Item');
+
+  /* ── SHEET 3: NON-COMPLIANT ITEMS ── */
+  const nokRows = detailRows.filter(r => r['Status'] === 'TIDAK SESUAI');
+  if (nokRows.length > 0) {
+    const nokSheet = XLSX.utils.json_to_sheet(nokRows);
+    nokSheet['!cols'] = [{wch:28},{wch:5},{wch:80},{wch:16},{wch:16},{wch:40}];
+    XLSX.utils.book_append_sheet(wb, nokSheet, 'Item Tidak Sesuai');
+  }
+
+  XLSX.writeFile(wb, fileName);
+}
+
+init();
+</script>
+</body>
+</html>
